@@ -6,9 +6,10 @@ from users.serializers import UserSerializer
 
 
 # Create your views here.
-  from django.core.cache import cache
+from django.core.cache import cache
 from django.conf import settings
 from rest_framework.response import Response
+from .utils import get_cache_key
 
 
 def get_cache_key(prefix, identifier=None):
@@ -17,10 +18,6 @@ def get_cache_key(prefix, identifier=None):
         return f"{prefix}_{identifier}"
     return prefix
 
-   from django.core.cache import cache
-from rest_framework.response import Response
-from .utils import get_cache_key
-from django.conf import settings
 
 def list(self, request, *args, **kwargs):
     """
@@ -49,3 +46,13 @@ def list(self, request, *args, **kwargs):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+    def perform_create(self, serializer):
+        cache.delete('br4_key')  # Invalidate user list cache on create
+        super().perform_create(serializer)
+    
+    def perform_update(self, serializer):
+        user_id = serializer.instance.id
+        cache.delete('br4_key')  # Invalidate user list cache on update
+        cache.delete(f'br4_{user_id}')  # Invalidate individual user cache on update
+        super().perform_update(serializer)
