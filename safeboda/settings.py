@@ -85,6 +85,19 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',  # Redis URL (db 1)
+        'TIMEOUT': 300,  # cache timeout in seconds (5 minutes)
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+# Add cache timeout setting
+CACHE_TTL = 60 * 15  # 15 minutes
 
 
 # Password validation
