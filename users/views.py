@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets
+from rest_framework.decorators import api_view
 
 from users.models import User
 from users.serializers import UserSerializer
@@ -56,3 +57,24 @@ class UserViewSet(viewsets.ModelViewSet):
         cache.delete('br4_key')  # Invalidate user list cache on update
         cache.delete(f'br4_{user_id}')  # Invalidate individual user cache on update
         super().perform_update(serializer)
+        user_data = self.get_serializer(serializer.instance).data
+        cache_key = f"br4_{serializer.instance.id}"
+        cache.set(cache_key, user_data, timeout=settings.CACHE_TTL)
+
+@api_view(['GET'])
+def cache_stats(request):
+    from django.core.cache import cache
+    import redis
+    # Connect to Redis DB 1 (as per your settings)
+    r = redis.Redis(host='127.0.0.1', port=6379, db=1)
+    keys = r.keys('*')
+    key_list = [k.decode('utf-8') for k in keys]
+    total_keys = len(key_list)
+    # Optionally, check if 'br4_key' is present and its value
+    br4_key_value = cache.get('br4_key')
+    return Response({
+        'cache_keys': key_list,
+        'total_keys': total_keys,
+        'br4_key_present': 'br4_key' in key_list,
+        'br4_key_value': br4_key_value,
+    })
